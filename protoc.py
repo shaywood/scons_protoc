@@ -4,7 +4,10 @@ protoc.py: Protoc Builder for SCons
 This Builder invokes protoc to generate C++ and Python 
 from a .proto file.  
 
-NOTE: Java is not currently supported."""
+Original author: Scott Stafford
+
+Java support by Steven Haywood (steven.haywood.2010@my.bristol.ac.uk) 
+"""
 
 __author__ = "Scott Stafford"
 
@@ -21,15 +24,21 @@ import os.path
 protocs = 'protoc'
 
 ProtocAction = SCons.Action.Action('$PROTOCCOM', '$PROTOCCOMSTR')
+
 def ProtocEmitter(target, source, env):
     dirOfCallingSConscript = Dir('.').srcnode()
+    
     env.Prepend(PROTOCPROTOPATH = dirOfCallingSConscript.path)
     
     source_with_corrected_path = []
+    
     for src in source:
-        commonprefix = os.path.commonprefix([dirOfCallingSConscript.path, src.srcnode().path])
-        if len(commonprefix)>0:
-            source_with_corrected_path.append( src.srcnode().path[len(commonprefix + os.sep):] )
+        commonprefix = os.path.commonprefix([dirOfCallingSConscript.path, 
+        									 src.srcnode().path])
+        
+        if len(commonprefix) > 0:
+            source_with_corrected_path.append( 
+            				src.srcnode().path[len(commonprefix + os.sep):] )
         else:
             source_with_corrected_path.append( src.srcnode().path )
         
@@ -71,7 +80,7 @@ def generate(env):
     env['PROTOC']        = env.Detect(protocs) or 'protoc'
     env['PROTOCFLAGS']   = SCons.Util.CLVar('')
     env['PROTOCPROTOPATH'] = SCons.Util.CLVar('')
-    env['PROTOCCOM']     = '$PROTOC ${["-I%s"%x for x in PROTOCPROTOPATH]} $PROTOCFLAGS --cpp_out=$PROTOCCPPOUTFLAGS$PROTOCOUTDIR ${PROTOCPYTHONOUTDIR and ("--python_out="+PROTOCPYTHONOUTDIR) or ""} ${PROTOCFDSOUT and ("-o"+PROTOCFDSOUT) or ""} ${SOURCES}'
+    env['PROTOCCOM']     = """$PROTOC ${["-I%s"%x for x in PROTOCPROTOPATH]} $PROTOCFLAGS --cpp_out=$PROTOCCPPOUTFLAGS$PROTOCOUTDIR ${PROTOCPYTHONOUTDIR and ("--python_out="+PROTOCPYTHONOUTDIR) or ""} ${PROTOCFDSOUT and ("-o"+PROTOCFDSOUT) or ""} ${SOURCES}"""
     env['PROTOCOUTDIR'] = '${SOURCE.dir}'
     env['PROTOCPYTHONOUTDIR'] = "python"
     env['PROTOCSRCSUFFIX']  = '.proto'
