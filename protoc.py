@@ -6,7 +6,19 @@ from a .proto file.
 
 Original author: Scott Stafford
 
-Java support by Steven Haywood (steven.haywood.2010@my.bristol.ac.uk) 
+Modifed by Steven Haywood (steven.haywood.2010@my.bristol.ac.uk) for:
+1) Java support
+2) Single-project multiple protoc output langauges support via neat* interface
+
+Note these changes break perfect backwards compatability. A simple change
+of "env.Protoc(target.cpp, source.proto)" to "env.ProtocCPP(target, source)"
+is all that is required. (similarly for Python). Note the environment variable
+wrangling previously required to select output language is replaced with
+explicit language builders and is therefore no longer required.
+
+*: REMOVING the environment variable for the language you DO NOT want is,
+in my (Steven Haywood's) opinion, NOT neat.
+
 """
 
 __author__ = "Scott Stafford"
@@ -23,9 +35,26 @@ import os.path
 
 protocs = 'protoc'
 
-ProtocAction = SCons.Action.Action('$PROTOCCOM', '$PROTOCCOMSTR')
+ProtocJavaAction = SCons.Action.Action(
+						'$PROTOCCOM_START $PROTOCJAVAFLAG $PROTOCCOM_END', 
+						'$PROTOCCOMSTR')
+						
+ProtocPythonAction = Scons.Action.Action(
+						'$PROTOCCOM_START $PROTOCPYTHONFLAG $PROTOCCOM_END', 
+						'$PROTOCCOMSTR')
+						
+ProtocCPPAction = Scons.Action.Action(
+						'$PROTOCCOM_START $PROTOCCPPFLAG $PROTOCCOM_END', 
+						'$PROTOCCOMSTR')
 
-def ProtocEmitter(target, source, env):
+def _ProtocEmitter(target, source, env, output_lang):
+	"""
+	Generlised emitter function for protoc commands.
+	However
+	
+	output_lang must be one of 'java', 'python', 'cpp'
+	
+	"""
     dirOfCallingSConscript = Dir('.').srcnode()
     
     env.Prepend(PROTOCPROTOPATH = dirOfCallingSConscript.path)
@@ -47,13 +76,15 @@ def ProtocEmitter(target, source, env):
     for src in source:
         modulename = os.path.splitext(src)[0]
 
-        if env['PROTOCOUTDIR']:            
+        if output_lang == 'cpp':            
             base = os.path.join(env['PROTOCOUTDIR'] , modulename)
             target.extend( [ base + '.pb.cc', base + '.pb.h' ] )
-        
-        if env['PROTOCPYTHONOUTDIR']:
+        elif output_lang == 'python':
             base = os.path.join(env['PROTOCPYTHONOUTDIR'] , modulename)
             target.append( base + '_pb2.py' )
+        elif output_lang == 'java':
+        	base = os.path.join(env['PROTOCJAVAOUTDIR'] , modulename)
+            target.append( base + '_pb2.java' )
 
     try:
         target.append(env['PROTOCFDSOUT'])
@@ -65,24 +96,72 @@ def ProtocEmitter(target, source, env):
 
     return target, source
 
-ProtocBuilder = SCons.Builder.Builder(action = ProtocAction,
-                                   emitter = ProtocEmitter,
+def ProtocJavaEmitter(target, source, env):
+	"""
+	Use generalised emitter.
+	"""
+	return _ProtocEmitter(target, source, env, 'java')
+	
+def ProtocPythonEmitter(target, source, env):
+	return _ProtocEmitter(target, source, env, 'python')
+	
+def ProtocCPPEmitter(target, source, env):
+	return _ProtocEmitter(target, source, env, 'cpp')
+
+# Define the three language builders:
+ProtocJavaBuilder = SCons.Builder.Builder(action = ProtocJavaAction,
+                                   emitter = ProtocJavaEmitter,
                                    srcsuffix = '$PROTOCSRCSUFFIX')
 
+ProtocPythonBuilder = SCons.Builder.Builder(action = ProtocPythonAction,
+                                   emitter = ProtocPythonEmitter,
+                                   srcsuffix = '$PROTOCSRCSUFFIX')
+
+ProtocCPPBuilder = SCons.Builder.Builder(action = ProtocCPPAction,
+                                   emitter = ProtocCPPEmitter,
+                                   srcsuffix = '$PROTOCSRCSUFFIX')
+
+_builder_dict = dict(ProtocCPP: ProtocCPPBuilder,
+                     ProtocPython: ProtocPythonBuilder,
+                     ProtocJava: ProtocJavaBuilder)
+
 def generate(env):
-    """Add Builders and construction variables for protoc to an Environment."""
-    try:
-        bld = env['BUILDERS']['Protoc']
-    except KeyError:
-        bld = ProtocBuilder
-        env['BUILDERS']['Protoc'] = bld
+    """
+    Add Builders and construction variables for protoc to an Environment.
+    """
+    
+    for key in _builder_dict.keys():
+        try:
+            bld = env['BUILDERS'][key]
+        except KeyError:
+            bld = _builder_dict[key]
+            env['BUILDERS'][key] = bld
         
     env['PROTOC']        = env.Detect(protocs) or 'protoc'
     env['PROTOCFLAGS']   = SCons.Util.CLVar('')
     env['PROTOCPROTOPATH'] = SCons.Util.CLVar('')
-    env['PROTOCCOM']     = """$PROTOC ${["-I%s"%x for x in PROTOCPROTOPATH]} $PROTOCFLAGS --cpp_out=$PROTOCCPPOUTFLAGS$PROTOCOUTDIR ${PROTOCPYTHONOUTDIR and ("--python_out="+PROTOCPYTHONOUTDIR) or ""} ${PROTOCFDSOUT and ("-o"+PROTOCFDSOUT) or ""} ${SOURCES}"""
+    
+    # Need to insert an option into the middle of the command,
+    # so use start and end COM strings    
+    env['PROTOCCOM_START']     = """$PROTOC ${["-I%s"%x for x in PROTOCPROTOPATH]} $PROTOCFLAGS ${PROTOCFDSOUT and ("-o"+PROTOCFDSOUT) or ""}"""
+    
+    env['PROTOCCOM_END'] = '${SOURCES}'
+    
+    # Provide environment variables for each possible language output
+    # so that users can easily put java files in a different directory
+    # to python files etc. Leave the python and CPP defaults as they were
+    # previously. Java outputs should probably go in a 'java' directory.
     env['PROTOCOUTDIR'] = '${SOURCE.dir}'
-    env['PROTOCPYTHONOUTDIR'] = "python"
+    env['PROTOCPYTHONOUTDIR'] = 'python'
+    env['PROTOCJAVAOUTDIR'] = 'java'
+    
+    # The variable protoc option, provided so that if users wish to alter
+    # flags for a specific output language for their project, they can.
+    # Obviously, the base --<lang>_out=<dir> part needs to remain.    
+    env['PROTOCJAVAFLAG'] = '--java_out=${PROTOCJAVAOUTDIR}'
+    env['PROTOCPYTHONFLAG'] = '--python_out=${PROTOCPYTHONOUTDIR}'
+    env['PROTOCCPPFLAG'] = '--cpp_out=${PROTOCOUTDIR}'
+        
     env['PROTOCSRCSUFFIX']  = '.proto'
 
 def exists(env):
