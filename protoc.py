@@ -37,15 +37,15 @@ protocs = 'protoc'
 
 ProtocJavaAction = SCons.Action.Action(
 						'$PROTOCCOM_START $PROTOCJAVAFLAG $PROTOCCOM_END', 
-						'$PROTOCCOMSTR')
+						'Running protoc for Java output')
 						
-ProtocPythonAction = Scons.Action.Action(
+ProtocPythonAction = SCons.Action.Action(
 						'$PROTOCCOM_START $PROTOCPYTHONFLAG $PROTOCCOM_END', 
-						'$PROTOCCOMSTR')
+						'Running protoc for Python output')
 						
-ProtocCPPAction = Scons.Action.Action(
+ProtocCPPAction = SCons.Action.Action(
 						'$PROTOCCOM_START $PROTOCCPPFLAG $PROTOCCOM_END', 
-						'$PROTOCCOMSTR')
+						'Running protoc for CPP output')
 
 def _ProtocEmitter(target, source, env, output_lang):
     """
@@ -96,9 +96,7 @@ def _ProtocEmitter(target, source, env, output_lang):
     return target, source
 
 def ProtocJavaEmitter(target, source, env):
-	"""
-	Use generalised emitter.
-	"""
+	# Use generalised emitter:
 	return _ProtocEmitter(target, source, env, 'java')
 	
 def ProtocPythonEmitter(target, source, env):
@@ -132,9 +130,11 @@ def generate(env):
     for key in _builder_dict.keys():
         try:
             bld = env['BUILDERS'][key]
+            #~ print "Found {0} in env['BUILDERS'] already!".format(str(key))
         except KeyError:
             bld = _builder_dict[key]
             env['BUILDERS'][key] = bld
+            #~ print "Added {0} to env['BUILDERS']".format(str(key))
         
     env['PROTOC']        = env.Detect(protocs) or 'protoc'
     env['PROTOCFLAGS']   = SCons.Util.CLVar('')
