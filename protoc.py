@@ -48,13 +48,12 @@ ProtocCPPAction = Scons.Action.Action(
 						'$PROTOCCOMSTR')
 
 def _ProtocEmitter(target, source, env, output_lang):
-	"""
-	Generlised emitter function for protoc commands.
-	However
-	
-	output_lang must be one of 'java', 'python', 'cpp'
-	
-	"""
+    """
+    Generlised emitter function for protoc commands.
+    
+    output_lang must be one of 'java', 'python', 'cpp'
+    """
+    
     dirOfCallingSConscript = Dir('.').srcnode()
     
     env.Prepend(PROTOCPROTOPATH = dirOfCallingSConscript.path)
@@ -83,7 +82,7 @@ def _ProtocEmitter(target, source, env, output_lang):
             base = os.path.join(env['PROTOCPYTHONOUTDIR'] , modulename)
             target.append( base + '_pb2.py' )
         elif output_lang == 'java':
-        	base = os.path.join(env['PROTOCJAVAOUTDIR'] , modulename)
+            base = os.path.join(env['PROTOCJAVAOUTDIR'] , modulename)
             target.append( base + '_pb2.java' )
 
     try:
@@ -121,9 +120,9 @@ ProtocCPPBuilder = SCons.Builder.Builder(action = ProtocCPPAction,
                                    emitter = ProtocCPPEmitter,
                                    srcsuffix = '$PROTOCSRCSUFFIX')
 
-_builder_dict = dict(ProtocCPP: ProtocCPPBuilder,
-                     ProtocPython: ProtocPythonBuilder,
-                     ProtocJava: ProtocJavaBuilder)
+_builder_dict = {'ProtocCPP': ProtocCPPBuilder,
+                 'ProtocPython': ProtocPythonBuilder,
+                 'ProtocJava': ProtocJavaBuilder}
 
 def generate(env):
     """
