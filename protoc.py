@@ -37,15 +37,15 @@ protocs = 'protoc'
 
 ProtocJavaAction = SCons.Action.Action(
 						'$PROTOCCOM_START $PROTOCJAVAFLAG $PROTOCCOM_END', 
-						'Running protoc for Java output')
+						'$PROTOCCOM_START $PROTOCJAVAFLAG $PROTOCCOM_END')
 						
 ProtocPythonAction = SCons.Action.Action(
 						'$PROTOCCOM_START $PROTOCPYTHONFLAG $PROTOCCOM_END', 
-						'Running protoc for Python output')
+						'$PROTOCCOM_START $PROTOCPYTHONFLAG $PROTOCCOM_END')
 						
 ProtocCPPAction = SCons.Action.Action(
 						'$PROTOCCOM_START $PROTOCCPPFLAG $PROTOCCOM_END', 
-						'Running protoc for CPP output')
+						'$PROTOCCOM_START $PROTOCCPPFLAG $PROTOCCOM_END')
 
 def _ProtocEmitter(target, source, env, output_lang):
     """
