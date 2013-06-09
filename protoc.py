@@ -53,7 +53,25 @@ def _ProtocEmitter(target, source, env, output_lang):
     
     output_lang must be one of 'java', 'python', 'cpp'
     """
-    
+    # @target can only be a directory (protoc limitation), therefore:
+    # iff target is a list, containing one string,
+    # which is a path to a directory, use that; else, use defaults.
+    # @target will always be a list (SCons says so)
+    if len(target) == 1 and os.path.isdir(str(target[0])):
+        if output_lang == 'java':
+            env['PROTOCJAVAOUTDIR'] = str(target[0])
+        elif output_lang == 'cpp':
+            env['PROTOCCPPOUTDIR'] = str(target[0])
+        elif output_lang == 'python':
+            env['PROTOCPYTHONOUTDIR'] = str(target[0])
+        # else raise an exception or something.
+    else:
+        # in all other cases (ie: target isn't a directory),
+        # set it to an empty list and the defaults will kick in
+        target = []
+
+    # Alter the path of the sources if required.
+    # NB: This code is Scott's and I'm not entirely sure why it is needed.   
     dirOfCallingSConscript = Dir('.').srcnode()
     
     env.Prepend(PROTOCPROTOPATH = dirOfCallingSConscript.path)
@@ -76,8 +94,10 @@ def _ProtocEmitter(target, source, env, output_lang):
         # get the filename of the source file 
         # (ie: foobar.proto from foo/bar/foobar.proto)
         modulename = os.path.basename(src)
+        print "filename.extension =", modulename
         # Then take foobar from foobar.proto
         modulename = os.path.splitext(modulename)[0]
+        print "filename =", modulename
 
         if output_lang == 'cpp':            
             base = os.path.join(env['PROTOCOUTDIR'], modulename)
@@ -87,10 +107,13 @@ def _ProtocEmitter(target, source, env, output_lang):
             target.append(base + '_pb2.py')
         elif output_lang == 'java':
             # For reasons best known to the elder gods of google,
-            # protoc capitalises the first character of its java output files
-            # I lost an hour of my life to this.
-            base = os.path.join(env['PROTOCJAVAOUTDIR'], 
-                                modulename.capitalize())
+            # protoc capitalises the FIRST character of its java output files
+            first_char = modulename[1]
+
+            if not first_char.isupper():
+                modulename = first_char.upper() + modulename[2:]
+
+            base = os.path.join(env['PROTOCJAVAOUTDIR'], modulename)
             target.append(base + '.java')
 
     try:
