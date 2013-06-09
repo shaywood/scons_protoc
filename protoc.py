@@ -64,7 +64,7 @@ def _ProtocEmitter(target, source, env, output_lang):
         commonprefix = os.path.commonprefix([dirOfCallingSConscript.path, 
         									 src.srcnode().path])
         
-        if len(commonprefix) > 0:
+        if len(commonprefix) > 0:            
             source_with_corrected_path.append( 
             				src.srcnode().path[len(commonprefix + os.sep):] )
         else:
@@ -73,26 +73,34 @@ def _ProtocEmitter(target, source, env, output_lang):
     source = source_with_corrected_path
     
     for src in source:
-        modulename = os.path.splitext(src)[0]
+        # get the filename of the source file 
+        # (ie: foobar.proto from foo/bar/foobar.proto)
+        modulename = os.path.basename(src)
+        # Then take foobar from foobar.proto
+        modulename = os.path.splitext(modulename)[0]
 
         if output_lang == 'cpp':            
-            base = os.path.join(env['PROTOCOUTDIR'] , modulename)
-            target.extend( [ base + '.pb.cc', base + '.pb.h' ] )
+            base = os.path.join(env['PROTOCOUTDIR'], modulename)
+            target.extend([base + '.pb.cc', base + '.pb.h'])
         elif output_lang == 'python':
-            base = os.path.join(env['PROTOCPYTHONOUTDIR'] , modulename)
-            target.append( base + '_pb2.py' )
+            base = os.path.join(env['PROTOCPYTHONOUTDIR'], modulename)
+            target.append(base + '_pb2.py')
         elif output_lang == 'java':
-            base = os.path.join(env['PROTOCJAVAOUTDIR'] , modulename)
-            target.append( base + '_pb2.java' )
+            # For reasons best known to the elder gods of google,
+            # protoc capitalises the first character of its java output files
+            # I lost an hour of my life to this.
+            base = os.path.join(env['PROTOCJAVAOUTDIR'], 
+                                modulename.capitalize())
+            target.append(base + '.java')
 
     try:
         target.append(env['PROTOCFDSOUT'])
     except KeyError:
         pass
         
-    #~ print "PROTOC SOURCE:", [str(s) for s in source]
-    #~ print "PROTOC TARGET:", [str(s) for s in target]
-
+    #print "PROTOC SOURCE:", [str(s) for s in source]
+    #print "PROTOC TARGET:", [str(s) for s in target]
+    
     return target, source
 
 def ProtocJavaEmitter(target, source, env):
