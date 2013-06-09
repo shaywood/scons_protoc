@@ -93,11 +93,9 @@ def _ProtocEmitter(target, source, env, output_lang):
     for src in source:
         # get the filename of the source file 
         # (ie: foobar.proto from foo/bar/foobar.proto)
-        modulename = os.path.basename(src)
-        print "filename.extension =", modulename
+        modulename = os.path.basename(src)        
         # Then take foobar from foobar.proto
         modulename = os.path.splitext(modulename)[0]
-        print "filename =", modulename
 
         if output_lang == 'cpp':            
             base = os.path.join(env['PROTOCOUTDIR'], modulename)
