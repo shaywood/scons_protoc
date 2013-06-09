@@ -22,11 +22,11 @@ TEST_PROTO_FILE = 'test.proto'
 env = Environment(tools = ['default', 'protoc'], toolpath = '.')
 
 # task for generating CPP files:
-gen_cpp_src = env.ProtocCPP([], TEST_PROTO_FILE)
+gen_cpp_src = env.ProtocCPP(target = [], source = TEST_PROTO_FILE)
 
-gen_python_src = env.ProtocPython([], TEST_PROTO_FILE)
+gen_python_src = env.ProtocPython(target = [], source = TEST_PROTO_FILE)
 
-gen_java_src = env.ProtocJava([], TEST_PROTO_FILE)
+gen_java_src = env.ProtocJava(target = [], source = TEST_PROTO_FILE)
 
 env.Default(gen_java_src)
 env.Default(gen_cpp_src)
