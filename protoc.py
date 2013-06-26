@@ -1,8 +1,8 @@
-""" 
+"""
 protoc.py: Protoc Builder for SCons
 
-This Builder invokes protoc to generate C++ and Python 
-from a .proto file.  
+This Builder invokes protoc to generate C++ and Python
+from a .proto file.
 
 Original author: Scott Stafford
 
@@ -36,21 +36,21 @@ import os.path
 protocs = 'protoc'
 
 ProtocJavaAction = SCons.Action.Action(
-						'$PROTOCCOM_START $PROTOCJAVAFLAG $PROTOCCOM_END', 
+						'$PROTOCCOM_START $PROTOCJAVAFLAG $PROTOCCOM_END',
 						'$PROTOCCOM_START $PROTOCJAVAFLAG $PROTOCCOM_END')
-						
+
 ProtocPythonAction = SCons.Action.Action(
-						'$PROTOCCOM_START $PROTOCPYTHONFLAG $PROTOCCOM_END', 
+						'$PROTOCCOM_START $PROTOCPYTHONFLAG $PROTOCCOM_END',
 						'$PROTOCCOM_START $PROTOCPYTHONFLAG $PROTOCCOM_END')
-						
+
 ProtocCPPAction = SCons.Action.Action(
-						'$PROTOCCOM_START $PROTOCCPPFLAG $PROTOCCOM_END', 
+						'$PROTOCCOM_START $PROTOCCPPFLAG $PROTOCCOM_END',
 						'$PROTOCCOM_START $PROTOCCPPFLAG $PROTOCCOM_END')
 
 def _ProtocEmitter(target, source, env, output_lang):
     """
     Generlised emitter function for protoc commands.
-    
+
     output_lang must be one of 'java', 'python', 'cpp'
     """
     # @target can only be a directory (protoc limitation), therefore:
@@ -71,33 +71,33 @@ def _ProtocEmitter(target, source, env, output_lang):
         target = []
 
     # Alter the path of the sources if required.
-    # NB: This code is Scott's and I'm not entirely sure why it is needed.   
+    # NB: This code is Scott's and I'm not entirely sure why it is needed.
     dirOfCallingSConscript = Dir('.').srcnode()
-    
+
     env.Prepend(PROTOCPROTOPATH = dirOfCallingSConscript.path)
-    
+
     source_with_corrected_path = []
-    
+
     for src in source:
-        commonprefix = os.path.commonprefix([dirOfCallingSConscript.path, 
+        commonprefix = os.path.commonprefix([dirOfCallingSConscript.path,
         									 src.srcnode().path])
-        
-        if len(commonprefix) > 0:            
-            source_with_corrected_path.append( 
+
+        if len(commonprefix) > 0:
+            source_with_corrected_path.append(
             				src.srcnode().path[len(commonprefix + os.sep):] )
         else:
             source_with_corrected_path.append( src.srcnode().path )
-        
+
     source = source_with_corrected_path
-    
+
     for src in source:
-        # get the filename of the source file 
+        # get the filename of the source file
         # (ie: foobar.proto from foo/bar/foobar.proto)
-        modulename = os.path.basename(src)        
+        modulename = os.path.basename(src)
         # Then take foobar from foobar.proto
         modulename = os.path.splitext(modulename)[0]
 
-        if output_lang == 'cpp':            
+        if output_lang == 'cpp':
             base = os.path.join(env['PROTOCOUTDIR'], modulename)
             target.extend([base + '.pb.cc', base + '.pb.h'])
         elif output_lang == 'python':
@@ -118,19 +118,19 @@ def _ProtocEmitter(target, source, env, output_lang):
         target.append(env['PROTOCFDSOUT'])
     except KeyError:
         pass
-        
+
     #print "PROTOC SOURCE:", [str(s) for s in source]
     #print "PROTOC TARGET:", [str(s) for s in target]
-    
+
     return target, source
 
 def ProtocJavaEmitter(target, source, env):
 	# Use generalised emitter:
 	return _ProtocEmitter(target, source, env, 'java')
-	
+
 def ProtocPythonEmitter(target, source, env):
 	return _ProtocEmitter(target, source, env, 'python')
-	
+
 def ProtocCPPEmitter(target, source, env):
 	return _ProtocEmitter(target, source, env, 'cpp')
 
@@ -155,7 +155,7 @@ def generate(env):
     """
     Add Builders and construction variables for protoc to an Environment.
     """
-    
+
     for key in _builder_dict.keys():
         try:
             bld = env['BUILDERS'][key]
@@ -164,17 +164,17 @@ def generate(env):
             bld = _builder_dict[key]
             env['BUILDERS'][key] = bld
             #~ print "Added {0} to env['BUILDERS']".format(str(key))
-        
+
     env['PROTOC']        = env.Detect(protocs) or 'protoc'
     env['PROTOCFLAGS']   = SCons.Util.CLVar('')
     env['PROTOCPROTOPATH'] = SCons.Util.CLVar('')
-    
+
     # Need to insert an option into the middle of the command,
-    # so use start and end COM strings    
+    # so use start and end COM strings
     env['PROTOCCOM_START']     = """$PROTOC ${["-I%s"%x for x in PROTOCPROTOPATH]} $PROTOCFLAGS ${PROTOCFDSOUT and ("-o"+PROTOCFDSOUT) or ""}"""
-    
+
     env['PROTOCCOM_END'] = '${SOURCES}'
-    
+
     # Provide environment variables for each possible language output
     # so that users can easily put java files in a different directory
     # to python files etc. Leave the python and CPP defaults as they were
@@ -182,14 +182,14 @@ def generate(env):
     env['PROTOCOUTDIR'] = '${SOURCE.dir}'
     env['PROTOCPYTHONOUTDIR'] = 'python'
     env['PROTOCJAVAOUTDIR'] = 'java'
-    
+
     # The variable protoc option, provided so that if users wish to alter
     # flags for a specific output language for their project, they can.
-    # Obviously, the base --<lang>_out=<dir> part needs to remain.    
+    # Obviously, the base --<lang>_out=<dir> part needs to remain.
     env['PROTOCJAVAFLAG'] = '--java_out=${PROTOCJAVAOUTDIR}'
     env['PROTOCPYTHONFLAG'] = '--python_out=${PROTOCPYTHONOUTDIR}'
     env['PROTOCCPPFLAG'] = '--cpp_out=${PROTOCOUTDIR}'
-        
+
     env['PROTOCSRCSUFFIX']  = '.proto'
 
 def exists(env):
