@@ -148,9 +148,6 @@ def _ProtocEmitter(target, source, env, output_lang):
     except KeyError:
         pass
 
-    #print "PROTOC SOURCE:", [str(s) for s in source]
-    #print "PROTOC TARGET:", [str(s) for s in target]
-
     return target, source
 
 def ProtocJavaEmitter(target, source, env):
