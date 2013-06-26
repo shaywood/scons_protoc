@@ -127,7 +127,6 @@ def _ProtocEmitter(target, source, env, output_lang):
                     if "java_package" in line:
                         # This proto file sets the java pakcage name. We need to inflate
                         # this into a path and stick it on the front
-                        print line
                         words = line.strip().split(" ")
                         newpath = words[-1][1:-2].replace(".", "/") + "/"
                         path = os.path.join(env['PROTOCJAVAOUTDIR'], newpath)
@@ -135,7 +134,6 @@ def _ProtocEmitter(target, source, env, output_lang):
                         # This proto file has overrriden what it's output filename will be
                         # We assume that it will be the last 'word' in the line, and be
                         # surrounded by " and have a semicolon at the end. As per spec
-                        print line
                         words = line.strip().split(" ")
                         base = words[-1][1:-2]
 
