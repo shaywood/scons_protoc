@@ -112,7 +112,36 @@ def _ProtocEmitter(target, source, env, output_lang):
                 modulename = first_char.upper() + modulename[2:]
 
             base = os.path.join(env['PROTOCJAVAOUTDIR'], modulename)
-            target.append(base + '.java')
+            path = ''
+
+            # For various really dumb reasons the target name we return MUST
+            # be an actual target file when it comes to do compilation of other steps
+            # However, in java mode protoc accepts an option to inflate the file down
+            # a Java filepath (e.g. "com/example/subdomain/") instead of where we'd usually
+            # expect. So we need to detect this and fix it.
+
+            # First, crack open the source file and inspect it for the option
+            srcfile = open(src)
+            for line in srcfile:
+                if "option" in line:
+                    if "java_package" in line:
+                        # This proto file sets the java pakcage name. We need to inflate
+                        # this into a path and stick it on the front
+                        print line
+                        words = line.strip().split(" ")
+                        newpath = words[-1][1:-2].replace(".", "/") + "/"
+                        path = os.path.join(env['PROTOCJAVAOUTDIR'], newpath)
+                    elif "java_outer_classname" in line:
+                        # This proto file has overrriden what it's output filename will be
+                        # We assume that it will be the last 'word' in the line, and be
+                        # surrounded by " and have a semicolon at the end. As per spec
+                        print line
+                        words = line.strip().split(" ")
+                        base = words[-1][1:-2]
+
+            # Now after all of that faffing about and special cases we can actually set this 
+            # source file's target
+            target.append(os.path.join(path, base) + '.java')
 
     try:
         target.append(env['PROTOCFDSOUT'])
