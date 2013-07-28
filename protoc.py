@@ -47,16 +47,24 @@ ProtocCPPAction = SCons.Action.Action(
 						'$PROTOCCOM_START $PROTOCCPPFLAG $PROTOCCOM_END',
 						'$PROTOCCOM_START $PROTOCCPPFLAG $PROTOCCOM_END')
 
+# It is further possible that the output is:
+# 1. A ZIP file. I... Oh god why?
+# 2. A JAR file replete with correct manifest.
+# These two particular features of protocol buffers are presently not supported.
+# Also, the ZIP file one can affect ALL languages.
+
 def _ProtocEmitter(target, source, env, output_lang):
     """
     Generlised emitter function for protoc commands.
 
     output_lang must be one of 'java', 'python', 'cpp'
     """
-    # @target can only be a directory (protoc limitation), therefore:
+    # @target can only be a directory* (protoc limitation), therefore:
     # iff target is a list, containing one string,
     # which is a path to a directory, use that; else, use defaults.
     # @target will always be a list (SCons says so)
+    # *: Actually, it can be a ZIP or a JAR file but shh!
+    
     if len(target) == 1 and os.path.isdir(str(target[0])):
         if output_lang == 'java':
             env['PROTOCJAVAOUTDIR'] = str(target[0])
@@ -72,6 +80,7 @@ def _ProtocEmitter(target, source, env, output_lang):
 
     # Alter the path of the sources if required.
     # NB: This code is Scott's and I'm not entirely sure why it is needed.
+    # ~ Steven Haywood.
     dirOfCallingSConscript = Dir('.').srcnode()
 
     env.Prepend(PROTOCPROTOPATH = dirOfCallingSConscript.path)
@@ -104,47 +113,61 @@ def _ProtocEmitter(target, source, env, output_lang):
             base = os.path.join(env['PROTOCPYTHONOUTDIR'], modulename)
             target.append(base + '_pb2.py')
         elif output_lang == 'java':
-            # For reasons best known to the elder gods of google,
-            # protoc capitalises the FIRST character of its java output files
-            first_char = modulename[1]
+            # Java is astoundingly complex.
+            # First of all, the file can override its target filename and
+            # target filepath. The only reasonable way to determine this
+            # is to search every line of the file for a particular "Regex".
+            base = None
+            path = None
 
-            if not first_char.isupper():
-                modulename = first_char.upper() + modulename[2:]
+            with open(src, 'r') as srcfile:
+                for line in srcfile:
+                    if "option" in line:
+                        if "java_package" in line:
+                            # This proto file sets the java package name. 
+                            # We need to inflate this into a path and 
+                            # stick it on the front.
+                            words = line.strip().split(" ")
+                            newpath = words[-1][1:-2].replace(".", "/") + "/"
+                            path = os.path.join(env['PROTOCJAVAOUTDIR'], newpath)
+                            break # cannot specify option more than once
+                            # and hopefully people put it at the top
+                            # saving iterating through lots of lines of text
+                        elif "java_outer_classname" in line:
+                            # This proto file has overrriden what its output 
+                            # filename will be. We assume that it will be the
+                            # last 'word' in the line, and be surrounded by "s
+                            # and have a semicolon at the end. As per spec.
+                            words = line.strip().split(" ")
+                            base = words[-1][1:-2]
+                            path = env['PROTOCJAVAOUTDIR']
+                            break
+                            
+            # If it hasn't done this, then the target filename is dictated
+            # by making the filename Java compatible and CamelCased (as is
+            # expected for a Java filename)
+            
+            if (base is None) and (path is None):
+                # FIXME - does not handle all manner of edge cases!
+                first_char = modulename[0]
+                
+                if not first_char.isupper():                
+                    modulename = first_char.upper() + modulename[1:]
 
-            base = os.path.join(env['PROTOCJAVAOUTDIR'], modulename)
-            path = ''
+                base = os.path.join(env['PROTOCJAVAOUTDIR'], modulename)
+                path = ''
+            
 
-            # For various really dumb reasons the target name we return MUST
-            # be an actual target file when it comes to do compilation of other steps
-            # However, in java mode protoc accepts an option to inflate the file down
-            # a Java filepath (e.g. "com/example/subdomain/") instead of where we'd usually
-            # expect. So we need to detect this and fix it.
-
-            # First, crack open the source file and inspect it for the option
-            srcfile = open(src)
-            for line in srcfile:
-                if "option" in line:
-                    if "java_package" in line:
-                        # This proto file sets the java pakcage name. We need to inflate
-                        # this into a path and stick it on the front
-                        words = line.strip().split(" ")
-                        newpath = words[-1][1:-2].replace(".", "/") + "/"
-                        path = os.path.join(env['PROTOCJAVAOUTDIR'], newpath)
-                    elif "java_outer_classname" in line:
-                        # This proto file has overrriden what it's output filename will be
-                        # We assume that it will be the last 'word' in the line, and be
-                        # surrounded by " and have a semicolon at the end. As per spec
-                        words = line.strip().split(" ")
-                        base = words[-1][1:-2]
-
-            # Now after all of that faffing about and special cases we can actually set this 
-            # source file's target
+            # Now after all of that faffing about and special cases we can 
+            # actually set this source file's target.
             target.append(os.path.join(path, base) + '.java')
 
     try:
         target.append(env['PROTOCFDSOUT'])
     except KeyError:
         pass
+
+    #print "For language", output_lang, "output is:", str(target)
 
     return target, source
 
