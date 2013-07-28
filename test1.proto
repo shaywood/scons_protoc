@@ -2,6 +2,6 @@
 
 option java_outer_classname = "Foobar";
 
-message Test {
+message Test1 {
     required uint32 hello = 1;
 };
