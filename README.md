@@ -15,8 +15,9 @@ Maintainer: Steven Haywood, steven.haywood.2010@my.bristol.ac.uk
 Authors:   
 ========
 Original author: Scott Stafford  
-Patches: Steven Haywood
-Contributors: James Laverack
+Patches: Steven Haywood  
+Contributors:  
+* James Laverack
 
 Notes:  
 ======
