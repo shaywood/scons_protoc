@@ -16,3 +16,12 @@ Authors:
 ========
 Original author: Scott Stafford  
 Patches: Steven Haywood
+Contributors: James Laverack
+
+Notes:  
+======
+If you're targetting Java and using the "option java\_package" or "option java\_outer\_classname"
+features of protoc, then try to put those option lines at the top of the file.
+
+This is due to having to scan for them in order to correctly predict target filenames, which
+will be slow for large .proto files.
