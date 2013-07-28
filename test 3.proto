@@ -1,0 +1,8 @@
+// A test file for determining if spaces in the .proto filename
+// cause problems for the Java output option.
+// Acts as a proxy test for all other characters which aren't
+// legal in Java identifiers but are in system filenames.
+
+message Test3Msg {
+    required uint32 Hello = 1;
+};
