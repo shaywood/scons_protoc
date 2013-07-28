@@ -17,7 +17,7 @@ is to check that we invoked protoc successfully, not whether protoc was, itself,
 successful.
 """
 
-TEST_PROTO_FILE = 'test.proto'
+TEST_PROTO_FILE = [str(x) for x in Glob('test*.proto')]
 
 env = Environment(tools = ['default', 'protoc'], toolpath = '.')
 

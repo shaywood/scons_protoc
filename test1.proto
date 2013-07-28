@@ -1,0 +1,7 @@
+// Test case file for determining if the java_outer_classname bit works.
+
+option java_outer_classname = "Foobar";
+
+message Test {
+    required uint32 hello = 1;
+};
